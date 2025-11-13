@@ -64,11 +64,10 @@ def load_model():
     # Si el modelo no existe localmente, intentar descargarlo
     if not os.path.exists(MODEL_PATH):
         st.warning("⚠️ Modelo no encontrado localmente. Verificando repositorio...")
-        # Aquí puedes agregar lógica para descargar desde GitHub Release o Drive
         st.error(f"❌ Modelo no encontrado en: {MODEL_PATH}")
         st.info("💡 Asegúrate de que 'best_effnetv2.keras' esté en la raíz del proyecto.")
         st.stop()
-
+    
     with st.spinner("🧠 Cargando modelo..."):
         try:
             model = tf.keras.models.load_model(MODEL_PATH)
@@ -91,12 +90,12 @@ def predict_image(model, pil_img):
     """Realiza la predicción"""
     x = preprocess_image(pil_img, IMG_SIZE)
     probs = model.predict(x, verbose=0)[0]
-
+    
     # Manejo de salida sigmoide binaria
     if probs.shape[0] == 1:
         p = float(probs[0])
         probs = np.array([1.0 - p, p])
-
+    
     idx = int(np.argmax(probs))
     return CLASS_NAMES[idx], float(probs[idx]), probs
 
@@ -118,7 +117,7 @@ with st.sidebar:
     document_id = st.text_input("Documento de Identidad", placeholder="Ej: 12345678")
     age = st.number_input("Edad", min_value=0, max_value=120, value=0, step=1)
     notes = st.text_area("Notas adicionales", placeholder="Observaciones médicas...")
-
+    
     st.markdown("---")
     st.markdown("### ℹ️ Acerca del modelo")
     st.info("""
@@ -137,17 +136,15 @@ with col1:
         type=["jpg", "jpeg", "png"],
         help="Formatos soportados: JPG, JPEG, PNG"
     )
-
+    
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Imagen cargada", use_container_width=True)
         st.image(image, caption="Imagen cargada", use_column_width=True)
-
-        if st.button("🔍 Analizar Radiografía", type="primary", use_container_width=True):
+        
         if st.button("🔍 Analizar Radiografía", type="primary"):
             with st.spinner("Analizando..."):
                 label, prob, all_probs = predict_image(model, image)
-
+                
                 # Guardar en historial
                 record = {
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -159,11 +156,11 @@ with col1:
                     "confidence": prob
                 }
                 st.session_state.history.insert(0, record)
-
+                
                 # Mostrar resultado en col2
                 with col2:
                     st.subheader("📊 Resultado del Análisis")
-
+                    
                     # Box de predicción
                     box_class = "normal-box" if label == "NORMAL" else "pneumonia-box"
                     emoji = "✅" if label == "NORMAL" else "⚠️"
@@ -171,14 +168,14 @@ with col1:
                         f'<div class="prediction-box {box_class}">{emoji} {label}</div>',
                         unsafe_allow_html=True
                     )
-
+                    
                     # Confianza
                     st.metric(
                         label="Nivel de Confianza",
                         value=f"{prob * 100:.2f}%",
                         delta=None
                     )
-
+                    
                     # Gráfico de probabilidades
                     st.markdown("#### Distribución de Probabilidades")
                     prob_df = pd.DataFrame({
@@ -186,7 +183,7 @@ with col1:
                         'Probabilidad': all_probs * 100
                     })
                     st.bar_chart(prob_df.set_index('Clase'))
-
+                    
                     # Información del paciente
                     if patient_name or document_id:
                         st.markdown("#### 👤 Datos del Paciente")
@@ -196,11 +193,10 @@ with col1:
                             st.text(f"Edad: {age if age > 0 else 'N/A'}")
                         with info_cols[1]:
                             st.text(f"Doc: {document_id or 'N/A'}")
-
+                        
                         if notes:
-                            st.text_area("Notas:", notes, disabled=True)
                             st.text_area("Notas:", notes, disabled=True, key="notes_display")
-
+                    
                     # Recomendación
                     if label == "PNEUMONIA":
                         st.error("⚠️ **Recomendación:** Se detectó posible neumonía. Consulte con un médico especialista de inmediato.")
@@ -221,7 +217,7 @@ if st.session_state.history:
     if st.button("🗑️ Limpiar Historial"):
         st.session_state.history = []
         st.rerun()
-
+    
     # Mostrar historial como tabla
     df = pd.DataFrame(st.session_state.history)
     
@@ -230,8 +226,6 @@ if st.session_state.history:
     df_display['confidence'] = df_display['confidence'].apply(lambda x: f"{x*100:.2f}%")
     
     st.dataframe(
-        df,
-        use_container_width=True,
         df_display,
         hide_index=True,
         column_config={
@@ -239,16 +233,6 @@ if st.session_state.history:
             "patient_name": "Paciente",
             "document_id": "Documento",
             "age": "Edad",
-            "prediction": st.column_config.TextColumn(
-                "Diagnóstico",
-                width="medium",
-            ),
-            "confidence": st.column_config.ProgressColumn(
-                "Confianza",
-                format="%.2f%%",
-                min_value=0,
-                max_value=1,
-            ),
             "prediction": "Diagnóstico",
             "confidence": "Confianza",
             "notes": "Notas"
