@@ -61,8 +61,12 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     """Carga el modelo de manera eficiente con cache"""
+    # Si el modelo no existe localmente, intentar descargarlo
     if not os.path.exists(MODEL_PATH):
+        st.warning("⚠️ Modelo no encontrado localmente. Verificando repositorio...")
+        # Aquí puedes agregar lógica para descargar desde GitHub Release o Drive
         st.error(f"❌ Modelo no encontrado en: {MODEL_PATH}")
+        st.info("💡 Asegúrate de que 'best_effnetv2.keras' esté en la raíz del proyecto.")
         st.stop()
     
     with st.spinner("🧠 Cargando modelo..."):
