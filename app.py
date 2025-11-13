@@ -64,7 +64,6 @@ def load_model():
     # Si el modelo no existe localmente, intentar descargarlo
     if not os.path.exists(MODEL_PATH):
         st.warning("⚠️ Modelo no encontrado localmente. Verificando repositorio...")
-        # Aquí puedes agregar lógica para descargar desde GitHub Release o Drive
         st.error(f"❌ Modelo no encontrado en: {MODEL_PATH}")
         st.info("💡 Asegúrate de que 'best_effnetv2.keras' esté en la raíz del proyecto.")
         st.stop()
@@ -140,9 +139,9 @@ with col1:
     
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Imagen cargada", use_container_width=True)
+        st.image(image, caption="Imagen cargada", use_column_width=True)
         
-        if st.button("🔍 Analizar Radiografía", type="primary", use_container_width=True):
+        if st.button("🔍 Analizar Radiografía", type="primary"):
             with st.spinner("Analizando..."):
                 label, prob, all_probs = predict_image(model, image)
                 
@@ -196,7 +195,7 @@ with col1:
                             st.text(f"Doc: {document_id or 'N/A'}")
                         
                         if notes:
-                            st.text_area("Notas:", notes, disabled=True)
+                            st.text_area("Notas:", notes, disabled=True, key="notes_display")
                     
                     # Recomendación
                     if label == "PNEUMONIA":
@@ -221,25 +220,22 @@ if st.session_state.history:
     
     # Mostrar historial como tabla
     df = pd.DataFrame(st.session_state.history)
+    
+    # Formatear confianza como porcentaje
+    df_display = df.copy()
+    df_display['confidence'] = df_display['confidence'].apply(lambda x: f"{x*100:.2f}%")
+    
     st.dataframe(
-        df,
-        use_container_width=True,
+        df_display,
         hide_index=True,
         column_config={
             "timestamp": "Fecha/Hora",
             "patient_name": "Paciente",
             "document_id": "Documento",
             "age": "Edad",
-            "prediction": st.column_config.TextColumn(
-                "Diagnóstico",
-                width="medium",
-            ),
-            "confidence": st.column_config.ProgressColumn(
-                "Confianza",
-                format="%.2f%%",
-                min_value=0,
-                max_value=1,
-            ),
+            "prediction": "Diagnóstico",
+            "confidence": "Confianza",
+            "notes": "Notas"
         }
     )
 else:
